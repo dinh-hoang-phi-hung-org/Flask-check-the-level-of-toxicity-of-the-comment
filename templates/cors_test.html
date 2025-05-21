@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Flask API CORS Test</title>
+    <script>
+      function testCORS() {
+        const url = document.getElementById("apiUrl").value;
+        const content = document.getElementById("content").value;
+
+        // Display the request we're making
+        document.getElementById(
+          "requestDetails"
+        ).textContent = `Testing ${url} with content: ${content}`;
+
+        // First test with fetch
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            content: content,
+            type: "test",
+            uuid: "test-123",
+          }),
+        })
+          .then((response) => {
+            console.log("Response status:", response.status);
+            return response.json();
+          })
+          .then((data) => {
+            document.getElementById("fetchResult").textContent =
+              "Success! Response: " + JSON.stringify(data, null, 2);
+          })
+          .catch((error) => {
+            document.getElementById("fetchResult").textContent =
+              "Error: " + error.message;
+            console.error("Error:", error);
+          });
+
+        // Also test with XMLHttpRequest
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url, true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              document.getElementById("xhrResult").textContent =
+                "Success! Response: " + xhr.responseText;
+            } else {
+              document.getElementById("xhrResult").textContent =
+                "Error: " + xhr.status + " " + xhr.statusText;
+            }
+          }
+        };
+        xhr.onerror = function (error) {
+          document.getElementById("xhrResult").textContent =
+            "Network Error: CORS might be blocking the request";
+          console.error("XHR Error:", error);
+        };
+        xhr.send(
+          JSON.stringify({
+            content: content,
+            type: "test",
+            uuid: "test-123",
+          })
+        );
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Flask API CORS Test</h1>
+    <div>
+      <label for="apiUrl">API URL:</label>
+      <input
+        type="text"
+        id="apiUrl"
+        value="http://localhost:5000/api/reports"
+        size="40"
+      />
+    </div>
+    <div>
+      <label for="content">Content to test:</label>
+      <input type="text" id="content" value="Test content" size="40" />
+    </div>
+    <button onclick="testCORS()">Test API</button>
+
+    <h2>Request:</h2>
+    <pre id="requestDetails"></pre>
+
+    <h2>Fetch Result:</h2>
+    <pre id="fetchResult"></pre>
+
+    <h2>XMLHttpRequest Result:</h2>
+    <pre id="xhrResult"></pre>
+
+    <h3>Instructions:</h3>
+    <ol>
+      <li>Make sure your Flask server is running</li>
+      <li>
+        Update the API URL if needed (default:
+        http://localhost:5000/api/reports)
+      </li>
+      <li>Enter some content to test</li>
+      <li>Click "Test API"</li>
+      <li>Check the results below and browser console for errors</li>
+    </ol>
+
+    <h3>Common CORS Issues:</h3>
+    <ul>
+      <li>Missing 'Access-Control-Allow-Origin' header</li>
+      <li>Incorrect 'Access-Control-Allow-Methods'</li>
+      <li>Missing 'Access-Control-Allow-Headers'</li>
+      <li>OPTIONS preflight request failing</li>
+    </ul>
+  </body>
+</html>

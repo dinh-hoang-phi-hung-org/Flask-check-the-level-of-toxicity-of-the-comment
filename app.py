@@ -1,10 +1,37 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
+from flask import Flask, request, jsonify, render_template, make_response
+from flask_cors import CORS, cross_origin
 import torch
 from transformers import AutoModel, AutoTokenizer
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app) 
+ALLOWED_ORIGIN = os.getenv('ALLOWED_ORIGIN')
+CORS(app, supports_credentials=True, origins=[ALLOWED_ORIGIN])
+
+# Add CORS headers once in after_request
+@app.after_request
+def add_cors_headers(response):
+    if 'Access-Control-Allow-Origin' in response.headers:
+        del response.headers['Access-Control-Allow-Origin']
+    if 'Access-Control-Allow-Headers' in response.headers:
+        del response.headers['Access-Control-Allow-Headers']  
+    if 'Access-Control-Allow-Methods' in response.headers:
+        del response.headers['Access-Control-Allow-Methods']
+    
+    # Set new headers with specific origin instead of wildcard
+    response.headers['Access-Control-Allow-Origin'] = ALLOWED_ORIGIN
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With,Accept,Origin'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+@app.route('/api/AI/check-toxic', methods=['OPTIONS'])
+def options_handler():
+    response = make_response()
+    return response
 
 # Define PhoBERT model class
 class PhoBertModel(torch.nn.Module):
@@ -29,7 +56,6 @@ class PhoBertModel(torch.nn.Module):
         output = torch.nn.Sigmoid()(output_2)
         return output
 
-# Initialize global variables
 model = None
 tokenizer = None
 label_names = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
@@ -56,20 +82,18 @@ load_model_and_tokenizer()
 def hello_world():
     return render_template("cors_test.html")
 
-@app.route("/api/reports", methods=["POST"])
+@app.route("/api/AI/check-toxic", methods=["POST"])
+@cross_origin()
 def analyze_comment():
     data = request.json
     
     if not data:
         return jsonify({"error": "No data provided"}), 400
     
-    # Handle TReport format with content, type, and uuid
     if "content" not in data:
         return jsonify({"error": "No content provided in the request"}), 400
     
     comment = data["content"]
-    report_type = data.get("type", "unknown")
-    report_uuid = data.get("uuid", "")
     
     # Tokenize the input
     inputs = tokenizer(comment, return_tensors='pt', padding=True, truncation=True, max_length=128)
@@ -85,16 +109,14 @@ def analyze_comment():
         results[label] = score
         
     # Determine if comment is toxic (if any category exceeds threshold)
-    threshold = 0.5
+    threshold = 0.8
     is_toxic = any(score > threshold for score in results.values())
     
     return jsonify({
-        "uuid": report_uuid,
-        "content": comment,
-        "type": report_type,
-        "is_toxic": is_toxic,
-        "scores": results
+        "payload": {
+            "is_toxic": is_toxic,
+        }
     })
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

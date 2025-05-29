@@ -5,3 +5,4 @@ torch>=1.10.0
 transformers>=4.18.0
 pypandoc>=1.8.0
 sentencepiece>=0.1.96
+python-dotenv==1.1.0

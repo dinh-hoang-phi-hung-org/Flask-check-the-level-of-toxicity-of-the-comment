@@ -1,0 +1,23 @@
+services:
+  flask-toxic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flask-toxic
+    restart: unless-stopped
+    ports:
+      - '5050:5000'
+    env_file:
+      - .env
+    volumes:
+      - ./weight:/app/weight:ro
+      - hf-cache:/app/.cache/huggingface
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+volumes:
+  hf-cache:

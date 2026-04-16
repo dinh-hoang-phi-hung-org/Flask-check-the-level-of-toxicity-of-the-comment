@@ -1,0 +1,15 @@
+services:
+  flask-toxic:
+    image: ${DOCKER_IMAGE}
+    container_name: flask-toxic
+    restart: unless-stopped
+    ports:
+      - '${PORT}:5050'
+    env_file:
+      - .env
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5050/api/AI/health']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
